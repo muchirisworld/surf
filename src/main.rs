@@ -1,9 +1,6 @@
 use std::{env, process};
 
-use crate::config::Config;
-
-mod matcher;
-mod config;
+use surf::{Config, LiteralMatcher, Matcher, search_file};
 
 fn main() {
     let args = env::args().collect::<Vec<String>>();
@@ -13,9 +10,17 @@ fn main() {
             process::exit(1)
         }
     );
-        
-    let found = matcher::read_lines(&cfg.filename).unwrap();
-    for (idx, line) in matcher::find_matches(&cfg.pattern, &found) {
-        println!("{}: {}", idx, line)
+    
+    let matcher: Box<dyn Matcher> = Box::new(
+        LiteralMatcher::new(&cfg.pattern)
+    );
+    
+    match search_file(matcher.as_ref(), &cfg.filename) {
+        Ok(matches) => {
+            println!("{:?}", matches)
+        },
+        Err(e) => eprintln!("Error occurred! {e}")
     }
+    
 }
+ 
