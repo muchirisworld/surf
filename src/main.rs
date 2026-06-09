@@ -1,26 +1,35 @@
-use std::{env, process};
+use std::{env, fs, process};
 
-use surf::{Config, LiteralMatcher, Matcher, search_file};
 
 fn main() {
-    let args = env::args().collect::<Vec<String>>();
-    let cfg = Config::new(&args)
-        .unwrap_or_else(|err| {
-            eprintln!("Problem parsing arguments: {err}");
-            process::exit(1)
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() != 3 {
+        eprintln!("usage: rgrep <pattern> <path>");
+        process::exit(2)
+    }
+
+    let pattern = &args[1];
+    let target = &args[2];
+
+    let contents = match fs::read_to_string(target) {
+        Ok(contents) => contents,
+        Err(err) => {
+            eprintln!("surf: failed to read {target}: {err}");
+            process::exit(1);
         }
-    );
-    
-    let matcher: Box<dyn Matcher> = Box::new(
-        LiteralMatcher::new(&cfg.pattern)
-    );
-    
-    match search_file(matcher.as_ref(), &cfg.filename) {
-        Ok(matches) => {
-            println!("{:?}", matches)
-        },
-        Err(e) => eprintln!("Error occurred! {e}")
+    };
+
+    for line in find_matches(pattern, contents.as_str()) {
+        println!("{line}");
     }
     
 }
- 
+
+fn find_matches<'a>(pattern: &str, contents: &'a str) -> Vec<&'a str> {
+    contents.lines()
+        .filter(|x| {
+            x.contains(pattern)
+        })
+        .collect()
+}
