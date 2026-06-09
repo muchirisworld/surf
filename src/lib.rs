@@ -1,15 +1,15 @@
 use std::fs;
 
-pub struct Args {
-    pub pattern: String,
-    pub path: String,
+struct Args {
+    pattern: String,
+    path: String,
 }
 
 pub fn run(args: Vec<String>) -> Result<(), String> {
     let args = parse_args(args)?;
 
     let contents = fs::read_to_string(&args.path)
-        .map_err(|err| format!("rgrep: failed to read {}: {err}", args.path))?;
+        .map_err(|err| format!("surf: failed to read {}: {err}", args.path))?;
 
     for line in find_matches(&args.pattern, contents.as_str()) {
         println!("{line}");
@@ -20,7 +20,7 @@ pub fn run(args: Vec<String>) -> Result<(), String> {
 
 fn parse_args(args: Vec<String>) -> Result<Args, String> {
     if args.len() != 2 {
-        return Err("usage: rgrep <pattern> <path>".to_string());
+        return Err("usage: surf <pattern> <path>".to_string());
     }
 
     Ok(Args {
