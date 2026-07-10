@@ -1,3 +1,4 @@
+use crate::diagnostic::{Diagnostic, ExitCode};
 
 pub struct Cli {
     pub pattern: String,
@@ -7,17 +8,9 @@ pub struct Cli {
     pub ignore_case: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ParseError {
-    MissingPattern,
-    MissingPath,
-    UnknownFlag(String),
-    MissingFlagValue(&'static str),
-}
-
-pub fn parse<I>(args: I) -> Result<Cli, ParseError>
+pub fn parse<I>(args: I) -> Result<Cli, Diagnostic>
 where
-    I: IntoIterator<Item = String>
+    I: IntoIterator<Item = String>,
 {
     let mut tokens = args.into_iter().peekable();
     let mut recursive = false;
@@ -30,29 +23,35 @@ where
             "-r" | "--recursive" => recursive = true,
             "-n" | "--line-numbers" => line_numbers = true,
             "-i" | "--ignore-case" => ignore_case = true,
+            "-h" | "--help" => {
+                return Err(Diagnostic{
+                    code: ExitCode::Success,
+                    message: "surf searches files for matching lines".to_string(),
+                    help: Some("usage: rgrep [OPTIONS] <pattern> <path>...".to_string()),
+                });
+            },
             "--" => {
                 positionals.extend(tokens);
                 break;
             }
-            flag if flag.starts_with('-') => return Err(ParseError::UnknownFlag(token)),
+            flag if flag.starts_with('-') => return Err(Diagnostic::usage(format!("Unknown flag `{token}`"))),
             _ => positionals.push(token),
         }
     }
 
     let mut positionals = positionals.into_iter();
-    let pattern = positionals.next().ok_or(ParseError::MissingPattern)?;
+    let pattern = positionals.next().ok_or_else(|| Diagnostic::usage("Missing pattern"))?;
     let paths: Vec<String> = positionals.collect();
 
     if paths.is_empty() {
-        return Err(ParseError::MissingPath)
+        return Err(Diagnostic::usage("Missing path"));
     }
 
-    Ok(Cli{
+    Ok(Cli {
         pattern,
         paths,
         recursive,
         line_numbers,
         ignore_case,
     })
-    
 }

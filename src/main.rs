@@ -5,9 +5,9 @@ fn main() {
 
     match surf::run(args) {
         Ok(()) => {}
-        Err(err) => {
-            eprintln!("{err}");
-            process::exit(1);
+        Err(diag) => {
+            eprintln!("{diag}");
+            process::exit(diag.code as i32);
         }
     }
 }
