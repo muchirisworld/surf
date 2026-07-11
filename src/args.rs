@@ -24,23 +24,27 @@ where
             "-n" | "--line-numbers" => line_numbers = true,
             "-i" | "--ignore-case" => ignore_case = true,
             "-h" | "--help" => {
-                return Err(Diagnostic{
+                return Err(Diagnostic {
                     code: ExitCode::Success,
                     message: "surf searches files for matching lines".to_string(),
                     help: Some("usage: rgrep [OPTIONS] <pattern> <path>...".to_string()),
                 });
-            },
+            }
             "--" => {
                 positionals.extend(tokens);
                 break;
             }
-            flag if flag.starts_with('-') => return Err(Diagnostic::usage(format!("Unknown flag `{token}`"))),
+            flag if flag.starts_with('-') => {
+                return Err(Diagnostic::usage(format!("Unknown flag `{token}`")));
+            }
             _ => positionals.push(token),
         }
     }
 
     let mut positionals = positionals.into_iter();
-    let pattern = positionals.next().ok_or_else(|| Diagnostic::usage("Missing pattern"))?;
+    let pattern = positionals
+        .next()
+        .ok_or_else(|| Diagnostic::usage("Missing pattern"))?;
     let paths: Vec<String> = positionals.collect();
 
     if paths.is_empty() {

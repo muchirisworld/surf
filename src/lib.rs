@@ -1,38 +1,31 @@
 pub mod args;
 pub mod diagnostic;
+pub mod search;
 
-use std::fs;
 use crate::diagnostic::Diagnostic;
-
+use std::{
+    fs::File,
+    io::{self, BufReader},
+};
 
 pub fn run(raw_args: Vec<String>) -> Result<(), Diagnostic> {
     let args = args::parse(raw_args)?;
+    let mut out = io::stdout().lock();
 
     for path in args.paths {
-        let contents = fs::read_to_string(&path)
-            .map_err(|err| Diagnostic::failure(format!("surf: failed to read {path}: {err}")))?;
-
-        let pattern = if args.ignore_case {
-            &args.pattern.to_lowercase()
-        } else {
-            &args.pattern
+        let file = File::open(&path)
+            .map_err(|err| Diagnostic::failure(format!("surf: failed to open {path}: {err}")))?;
+        let reader = BufReader::new(file);
+        let options = search::SearchOptions {
+            ignore_case: args.ignore_case,
+            pattern: args.pattern.clone(),
+            recursive: args.recursive,
         };
 
-        for (index, line) in contents.lines().enumerate() {
-            let haystack = if args.ignore_case {
-                line.to_lowercase()
-            } else {
-                line.to_string()
-            };
-
-            if haystack.contains(pattern) {
-                if args.line_numbers {
-                    println!("{}: {line}", index + 1);
-                } else {
-                    println!("{line}");
-                }
-            }
-        }
+        let matches = search::search_reader(reader, &options)
+            .map_err(|err| Diagnostic::failure(format!("failed to read {path}: {err}")))?;
+        search::write_matches(&mut out, &matches, args.line_numbers)
+            .map_err(|err| Diagnostic::failure(format!("failed to write output: {err}")))?;
     }
 
     Ok(())
