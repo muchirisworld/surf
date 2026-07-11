@@ -1,5 +1,7 @@
 use std::io::{self, BufRead, Write};
 
+use crate::matcher::Matcher;
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SearchOptions {
     pub pattern: String,
@@ -8,34 +10,22 @@ pub struct SearchOptions {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Match {
+pub struct LineMatch {
     pub line: String,
     pub line_number: usize,
 }
 
-pub fn search_reader<R>(reader: R, options: &SearchOptions) -> io::Result<Vec<Match>>
+pub fn search_reader<R>(reader: R, matcher: &Matcher) -> io::Result<Vec<LineMatch>>
 where
     R: BufRead,
 {
-    let needle = if options.ignore_case {
-        options.pattern.to_lowercase()
-    } else {
-        options.pattern.clone()
-    };
-
     let mut matches = Vec::new();
 
     for (i, line) in reader.lines().enumerate() {
         let line = line?;
 
-        let haystack = if options.ignore_case {
-            line.to_lowercase()
-        } else {
-            line.clone()
-        };
-
-        if haystack.contains(&needle) {
-            matches.push(Match {
+        if matcher.is_match(&line) {
+            matches.push(LineMatch {
                 line,
                 line_number: i + 1,
             });
@@ -45,7 +35,7 @@ where
     Ok(matches)
 }
 
-pub fn write_matches<W>(mut writer: W, matches: &[Match], line_numbers: bool) -> io::Result<()>
+pub fn write_matches<W>(mut writer: W, matches: &[LineMatch], line_numbers: bool) -> io::Result<()>
 where
     W: Write,
 {

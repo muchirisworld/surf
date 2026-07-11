@@ -6,6 +6,8 @@ pub struct Cli {
     pub recursive: bool,
     pub line_numbers: bool,
     pub ignore_case: bool,
+    pub invert_match: bool,
+    pub whole_line: bool
 }
 
 pub fn parse<I>(args: I) -> Result<Cli, Diagnostic>
@@ -16,6 +18,8 @@ where
     let mut recursive = false;
     let mut line_numbers = false;
     let mut ignore_case = false;
+    let mut invert_match = false;
+    let mut whole_line = false;
     let mut positionals = Vec::new();
 
     while let Some(token) = tokens.next() {
@@ -23,6 +27,8 @@ where
             "-r" | "--recursive" => recursive = true,
             "-n" | "--line-numbers" => line_numbers = true,
             "-i" | "--ignore-case" => ignore_case = true,
+            "-x" | "--line-regexp" => whole_line = true,
+            "-v" | "--invert-match" => invert_match = true,
             "-h" | "--help" => {
                 return Err(Diagnostic {
                     code: ExitCode::Success,
@@ -57,5 +63,7 @@ where
         recursive,
         line_numbers,
         ignore_case,
+        invert_match,
+        whole_line
     })
 }
