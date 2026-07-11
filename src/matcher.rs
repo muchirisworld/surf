@@ -26,8 +26,8 @@ impl Matcher {
     fn match_against(&self, line: &str, pattern: &str) -> bool {
         match self.mode {
             MatchMode::Contains => line.contains(pattern),
-            MatchMode::WholeLine => line == pattern
-        }   
+            MatchMode::WholeLine => line == pattern,
+        }
     }
 
     pub fn is_match(&self, line: &str) -> bool {
@@ -37,10 +37,6 @@ impl Matcher {
             self.match_against(line, &self.pattern)
         };
 
-        if self.invert {
-            !matched
-        } else {
-            matched
-        }
+        if self.invert { !matched } else { matched }
     }
 }

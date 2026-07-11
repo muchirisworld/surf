@@ -7,7 +7,7 @@ pub struct Cli {
     pub line_numbers: bool,
     pub ignore_case: bool,
     pub invert_match: bool,
-    pub whole_line: bool
+    pub whole_line: bool,
 }
 
 pub fn parse<I>(args: I) -> Result<Cli, Diagnostic>
@@ -64,6 +64,6 @@ where
         line_numbers,
         ignore_case,
         invert_match,
-        whole_line
+        whole_line,
     })
 }
