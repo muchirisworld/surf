@@ -1,15 +1,19 @@
-use std::{fs, io, path::{Path, PathBuf}};
-
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+};
 
 pub struct IgnoreSet {
-    patterns: Vec<IgnorePattern>
+    patterns: Vec<IgnorePattern>,
 }
 
 struct IgnorePattern(String);
 
 impl IgnoreSet {
     pub fn empty() -> Self {
-        Self { patterns: Vec::new() }
+        Self {
+            patterns: Vec::new(),
+        }
     }
 
     pub fn from_file(path: &Path) -> io::Result<Self> {
@@ -24,7 +28,7 @@ impl IgnoreSet {
                 .map(|line| line.trim())
                 .filter(|line| !line.is_empty() && !line.starts_with('#'))
                 .map(|line| IgnorePattern(line.to_string()))
-                .collect()
+                .collect(),
         }
     }
 
@@ -49,7 +53,7 @@ impl IgnorePattern {
             return path
                 .file_name()
                 .and_then(|x| x.to_str())
-                .is_some_and(|x| x.ends_with(suffix))
+                .is_some_and(|x| x.ends_with(suffix));
         }
 
         path.components().any(|part| part.as_os_str() == pattern)

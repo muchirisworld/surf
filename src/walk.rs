@@ -4,7 +4,7 @@ use crate::ignore;
 
 pub struct WalkOptions<'a> {
     pub recursive: bool,
-    pub ignore: &'a ignore::IgnoreSet
+    pub ignore: &'a ignore::IgnoreSet,
 }
 
 pub struct WorkItem {
@@ -19,7 +19,7 @@ pub fn collect_files(paths: &[PathBuf], options: &WalkOptions) -> io::Result<Vec
         if options.ignore.is_ignored(&path) {
             continue;
         }
-        
+
         let metadata = fs::metadata(&path)?;
 
         if metadata.is_file() {
