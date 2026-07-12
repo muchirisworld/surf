@@ -1,7 +1,10 @@
 use std::{collections::VecDeque, fs, io, path::PathBuf};
 
-pub struct WalkOptions {
+use crate::ignore;
+
+pub struct WalkOptions<'a> {
     pub recursive: bool,
+    pub ignore: &'a ignore::IgnoreSet
 }
 
 pub struct WorkItem {
@@ -13,6 +16,10 @@ pub fn collect_files(paths: &[PathBuf], options: &WalkOptions) -> io::Result<Vec
     let mut queue: VecDeque<PathBuf> = paths.iter().cloned().collect();
 
     while let Some(path) = queue.pop_front() {
+        if options.ignore.is_ignored(&path) {
+            continue;
+        }
+        
         let metadata = fs::metadata(&path)?;
 
         if metadata.is_file() {

@@ -1,12 +1,12 @@
 pub mod args;
 pub mod diagnostic;
+pub mod ignore;
 pub mod matcher;
 pub mod search;
 pub mod walk;
 
 use crate::{
-    diagnostic::Diagnostic,
-    matcher::{MatchMode, Matcher},
+    diagnostic::Diagnostic, matcher::{MatchMode, Matcher},
 };
 use std::{
     fs::File,
@@ -23,6 +23,7 @@ pub fn run(raw_args: Vec<String>) -> Result<(), Diagnostic> {
         &paths,
         &walk::WalkOptions {
             recursive: args.recursive,
+            ignore: &ignore::IgnoreSet::empty()
         },
     )
     .map_err(|err| Diagnostic::failure(format!("failed to collect files: {err}")))?;
