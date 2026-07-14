@@ -5,6 +5,7 @@ use crate::{
     diagnostic::{Diagnostic, ExitCode},
 };
 
+#[derive(Debug)]
 pub struct Cli {
     pub pattern: String,
     pub paths: Vec<String>,
@@ -114,4 +115,64 @@ where
             ignore_file,
         },
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn to_args(args: &[&str]) -> Vec<String> {
+        args.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn test_parse_simple() {
+        let cli = parse(to_args(&["pattern", "path1", "path2"])).unwrap();
+        assert_eq!(cli.pattern, "pattern");
+        assert_eq!(cli.paths, vec!["path1".to_string(), "path2".to_string()]);
+        assert_eq!(cli.options.recursive, None);
+    }
+
+    #[test]
+    fn test_parse_flags() {
+        let cli = parse(to_args(&["-r", "-n", "-i", "-v", "-x", "pattern", "path"])).unwrap();
+        assert_eq!(cli.options.recursive, Some(true));
+        assert_eq!(cli.options.line_numbers, Some(true));
+        assert_eq!(cli.options.ignore_case, Some(true));
+        assert_eq!(cli.options.invert_match, Some(true));
+        assert_eq!(cli.options.whole_line, Some(true));
+    }
+
+    #[test]
+    fn test_parse_context_and_color() {
+        let cli = parse(to_args(&[
+            "-B",
+            "3",
+            "-A",
+            "5",
+            "--color",
+            "always",
+            "--ignore-file",
+            "my.ignore",
+            "pattern",
+            "path",
+        ]))
+        .unwrap();
+        assert_eq!(cli.options.before_context, Some(3));
+        assert_eq!(cli.options.after_context, Some(5));
+        assert_eq!(cli.options.color.as_deref(), Some("always"));
+        assert_eq!(cli.options.ignore_file, Some(PathBuf::from("my.ignore")));
+    }
+
+    #[test]
+    fn test_parse_missing_pattern() {
+        let err = parse(to_args(&[])).unwrap_err();
+        assert!(err.message.contains("Missing pattern"));
+    }
+
+    #[test]
+    fn test_parse_missing_path() {
+        let err = parse(to_args(&["pattern"])).unwrap_err();
+        assert!(err.message.contains("Missing path"));
+    }
 }

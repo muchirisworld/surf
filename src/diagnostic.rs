@@ -1,11 +1,13 @@
 use std::fmt;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExitCode {
     Success = 0,
     Failure = 1,
     Usage = 2,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Diagnostic {
     pub code: ExitCode,
     pub message: String,

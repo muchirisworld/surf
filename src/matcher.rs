@@ -41,3 +41,40 @@ impl Matcher {
         if self.invert { !matched } else { matched }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_contains_case_sensitive() {
+        let matcher = Matcher::new("rust".to_string(), false, MatchMode::Contains, false);
+        assert!(matcher.is_match("rust programming"));
+        assert!(matcher.is_match("rust"));
+        assert!(!matcher.is_match("Rust"));
+        assert!(!matcher.is_match("cargo"));
+    }
+
+    #[test]
+    fn test_contains_case_insensitive() {
+        let matcher = Matcher::new("rUsT".to_string(), true, MatchMode::Contains, false);
+        assert!(matcher.is_match("rust programming"));
+        assert!(matcher.is_match("RUST"));
+        assert!(matcher.is_match("Rust"));
+        assert!(!matcher.is_match("cargo"));
+    }
+
+    #[test]
+    fn test_whole_line() {
+        let matcher = Matcher::new("rust".to_string(), false, MatchMode::WholeLine, false);
+        assert!(matcher.is_match("rust"));
+        assert!(!matcher.is_match("rust programming"));
+    }
+
+    #[test]
+    fn test_invert_match() {
+        let matcher = Matcher::new("rust".to_string(), false, MatchMode::Contains, true);
+        assert!(!matcher.is_match("rust programming"));
+        assert!(matcher.is_match("cargo"));
+    }
+}
