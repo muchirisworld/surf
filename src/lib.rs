@@ -1,4 +1,5 @@
 pub mod args;
+pub mod config;
 pub mod diagnostic;
 pub mod ignore;
 pub mod matcher;
