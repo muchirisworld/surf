@@ -3,6 +3,7 @@ pub mod config;
 pub mod diagnostic;
 pub mod ignore;
 pub mod matcher;
+pub mod parallel;
 pub mod render;
 pub mod search;
 pub mod walk;

@@ -1,4 +1,7 @@
-use std::{fs, path::{Path, PathBuf}};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -48,8 +51,7 @@ impl Default for Settings {
 pub fn load_file(path: &Path) -> Result<FileConfig, String> {
     let text = fs::read_to_string(path)
         .map_err(|err| format!("failed to read config {}: {err}", path.display()))?;
-    toml::from_str(&text)
-        .map_err(|err| format!("failed to parse config {}: {err}", path.display()))
+    toml::from_str(&text).map_err(|err| format!("failed to parse config {}: {err}", path.display()))
 }
 
 #[allow(unused)]
@@ -60,7 +62,10 @@ fn apply_file(settings: &mut Settings, file: &FileConfig) -> Result<(), String> 
     settings.invert_match = file.invert_match.unwrap_or(settings.invert_match);
     settings.before_context = file.before_context.unwrap_or(settings.before_context);
     settings.after_context = file.after_context.unwrap_or(settings.after_context);
-    settings.ignore_file = file.ignore_file.clone().or_else(|| settings.ignore_file.clone());
+    settings.ignore_file = file
+        .ignore_file
+        .clone()
+        .or_else(|| settings.ignore_file.clone());
 
     if file.whole_line.unwrap_or(false) {
         settings.mode = matcher::MatchMode::WholeLine;
