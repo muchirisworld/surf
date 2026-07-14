@@ -48,14 +48,28 @@ impl Default for Settings {
     }
 }
 
-pub fn load_file(path: &Path) -> Result<FileConfig, String> {
+impl Settings {
+    pub fn build(cli_options: &FileConfig) -> Result<Self, String> {
+        let mut settings = Self::default();
+
+        let default_config_file = Path::new(".surf.toml");
+        if default_config_file.exists() {
+            let file = load_file(default_config_file)?;
+            apply_file(&mut settings, &file)?;
+        }
+
+        apply_file(&mut settings, cli_options)?;
+        Ok(settings)
+    }
+}
+
+fn load_file(path: &Path) -> Result<FileConfig, String> {
     let text = fs::read_to_string(path)
         .map_err(|err| format!("failed to read config {}: {err}", path.display()))?;
     toml::from_str(&text).map_err(|err| format!("failed to parse config {}: {err}", path.display()))
 }
 
-#[allow(unused)]
-fn apply_file(settings: &mut Settings, file: &FileConfig) -> Result<(), String> {
+pub fn apply_file(settings: &mut Settings, file: &FileConfig) -> Result<(), String> {
     settings.recursive = file.recursive.unwrap_or(settings.recursive);
     settings.line_numbers = file.line_numbers.unwrap_or(settings.line_numbers);
     settings.ignore_case = file.ignore_case.unwrap_or(settings.ignore_case);

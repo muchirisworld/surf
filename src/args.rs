@@ -1,13 +1,14 @@
-use crate::diagnostic::{Diagnostic, ExitCode};
+use std::path::PathBuf;
+
+use crate::{
+    config,
+    diagnostic::{Diagnostic, ExitCode},
+};
 
 pub struct Cli {
     pub pattern: String,
     pub paths: Vec<String>,
-    pub recursive: bool,
-    pub line_numbers: bool,
-    pub ignore_case: bool,
-    pub invert_match: bool,
-    pub whole_line: bool,
+    pub options: config::FileConfig,
 }
 
 pub fn parse<I>(args: I) -> Result<Cli, Diagnostic>
@@ -15,20 +16,61 @@ where
     I: IntoIterator<Item = String>,
 {
     let mut tokens = args.into_iter().peekable();
-    let mut recursive = false;
-    let mut line_numbers = false;
-    let mut ignore_case = false;
-    let mut invert_match = false;
-    let mut whole_line = false;
+    let mut recursive = None;
+    let mut line_numbers = None;
+    let mut ignore_case = None;
+    let mut invert_match = None;
+    let mut whole_line = None;
+    let mut before_context = None;
+    let mut after_context = None;
+    let mut color = None;
+    let mut ignore_file = None;
+
     let mut positionals = Vec::new();
 
     while let Some(token) = tokens.next() {
         match token.as_str() {
-            "-r" | "--recursive" => recursive = true,
-            "-n" | "--line-numbers" => line_numbers = true,
-            "-i" | "--ignore-case" => ignore_case = true,
-            "-x" | "--line-regexp" => whole_line = true,
-            "-v" | "--invert-match" => invert_match = true,
+            "-r" | "--recursive" => recursive = Some(true),
+            "-n" | "--line-numbers" => line_numbers = Some(true),
+            "-i" | "--ignore-case" => ignore_case = Some(true),
+            "-x" | "--line-regexp" => whole_line = Some(true),
+            "-v" | "--invert-match" => invert_match = Some(true),
+
+            // Parsing arguments that take a value:
+            "-B" | "--before-context" => {
+                let val_str = tokens.next().ok_or_else(|| {
+                    Diagnostic::usage("Missing value for --before-context".to_string())
+                })?;
+                let val = val_str.parse::<usize>().map_err(|_| {
+                    Diagnostic::usage(format!(
+                        "Invalid integer value `{val_str}` for --before-context"
+                    ))
+                })?;
+                before_context = Some(val);
+            }
+            "-A" | "--after-context" => {
+                let val_str = tokens.next().ok_or_else(|| {
+                    Diagnostic::usage("Missing value for --after-context".to_string())
+                })?;
+                let val = val_str.parse::<usize>().map_err(|_| {
+                    Diagnostic::usage(format!(
+                        "Invalid integer value `{val_str}` for --after-context"
+                    ))
+                })?;
+                after_context = Some(val);
+            }
+            "--color" => {
+                let color_str = tokens
+                    .next()
+                    .ok_or_else(|| Diagnostic::usage("Missing value for --color".to_string()))?;
+                color = Some(color_str);
+            }
+            "--ignore-file" => {
+                let path_str = tokens.next().ok_or_else(|| {
+                    Diagnostic::usage("Missing value for --ignore-file".to_string())
+                })?;
+                ignore_file = Some(PathBuf::from(path_str));
+            }
             "-h" | "--help" => {
                 return Err(Diagnostic {
                     code: ExitCode::Success,
@@ -60,10 +102,16 @@ where
     Ok(Cli {
         pattern,
         paths,
-        recursive,
-        line_numbers,
-        ignore_case,
-        invert_match,
-        whole_line,
+        options: config::FileConfig {
+            recursive,
+            line_numbers,
+            ignore_case,
+            invert_match,
+            whole_line,
+            after_context,
+            before_context,
+            color,
+            ignore_file,
+        },
     })
 }

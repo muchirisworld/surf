@@ -8,60 +8,70 @@ pub mod render;
 pub mod search;
 pub mod walk;
 
-use crate::{
-    diagnostic::Diagnostic,
-    matcher::{MatchMode, Matcher},
-};
+use crate::{diagnostic::Diagnostic, matcher::Matcher};
 use std::{
-    fs::File,
-    io::{self, BufReader},
+    io::{self},
     path::PathBuf,
+    thread,
 };
 
 pub fn run(raw_args: Vec<String>) -> Result<(), Diagnostic> {
     let args = args::parse(raw_args)?;
+    let settings = config::Settings::build(&args.options)
+        .map_err(|err| Diagnostic::failure(format!("failed to load settings: {err}")))?;
     let mut out = io::stdout().lock();
 
     let paths: Vec<PathBuf> = args.paths.iter().map(PathBuf::from).collect();
+    let ignore_set = if let Some(ref path) = settings.ignore_file {
+        ignore::IgnoreSet::from_file(path).map_err(|err| {
+            Diagnostic::failure(format!("failed to load ignore file {:?}: {err}", path))
+        })?
+    } else {
+        ignore::IgnoreSet::empty()
+    };
+
     let files = walk::collect_files(
         &paths,
         &walk::WalkOptions {
-            recursive: args.recursive,
-            ignore: &ignore::IgnoreSet::empty(),
+            recursive: settings.recursive,
+            ignore: &ignore_set,
         },
     )
     .map_err(|err| Diagnostic::failure(format!("failed to collect files: {err}")))?;
 
-    for item in files {
-        let file = File::open(&item.path).map_err(|err| {
-            Diagnostic::failure(format!("surf: failed to open {:?}: {err}", item.path))
-        })?;
-        let reader = BufReader::new(file);
+    let files: Vec<PathBuf> = files.into_iter().map(|item| item.path).collect();
 
-        let mode = if args.whole_line {
-            MatchMode::WholeLine
-        } else {
-            MatchMode::Contains
-        };
-        let matcher = Matcher::new(
-            args.pattern.clone(),
-            args.ignore_case,
-            mode,
-            args.invert_match,
-        );
+    let matcher = Matcher::new(
+        args.pattern.clone(),
+        settings.ignore_case,
+        settings.mode,
+        settings.invert_match,
+    );
+    let context = search::Context {
+        before: settings.before_context,
+        after: settings.after_context,
+    };
+    let workers = thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4);
 
-        let context = search::Context {
-            before: 0,
-            after: 0,
-        };
-        let events = search::search_reader(reader, &matcher, context)
-            .map_err(|err| Diagnostic::failure(format!("failed to read {:?}: {err}", item.path)))?;
-        let options = render::RenderOptions {
-            line_numbers: args.line_numbers,
-            color: render::Color::Never,
-        };
-        render::render_events(&mut out, &item.path, &events, options)
-            .map_err(|err| Diagnostic::failure(format!("failed to write output: {err}")))?;
+    let search_results = parallel::search_parallel(files, matcher, context, workers);
+
+    let render_options = render::RenderOptions {
+        line_numbers: settings.line_numbers,
+        color: settings.color,
+    };
+
+    for result in search_results {
+        match result.result {
+            Ok(events) => {
+                render::render_events(&mut out, &result.path, &events, render_options)
+                    .map_err(|err| Diagnostic::failure(format!("failed to write output: {err}")))?;
+            }
+            Err(err_msg) => {
+                eprintln!("surf: error searching {:?}: {}", result.path, err_msg);
+            }
+        }
     }
 
     Ok(())
